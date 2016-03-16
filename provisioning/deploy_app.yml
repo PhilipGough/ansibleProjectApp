@@ -1,0 +1,33 @@
+---
+
+- hosts: webservers
+  #user: ubuntu
+  sudo: True
+
+  vars_files:
+    - "vars/flask_app.yml"
+
+  tasks:
+    - name: ensure log directory
+      file: dest={{webapps_dir}}/{{app_name}}/log state=directory
+
+    - name: Pull code via git
+      git: repo={{repo_url}} dest={{webapps_dir}}/{{app_name}}/src remote={{repo_remote}} version={{repo_version}}
+
+    - name: install dependencies into virtualenv from requirements.txt
+      pip: requirements={{webapps_dir}}/{{app_name}}/src/requirements.txt virtualenv={{webapps_dir}}/{{app_name}}/venv state=present
+
+    - name: create supervisor program config
+      template: src=files/supervisor.ini dest=/etc/supervisor/{{app_name}}.ini
+      notify:
+        - restart app
+
+    - name: start app
+      supervisorctl: name={{app_name}} state=started
+
+  handlers:
+    - name: restart app
+      supervisorctl: name={{app_name}} state=restarted
+
+
+

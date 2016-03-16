@@ -1,0 +1,20 @@
+---
+
+ip: '192.168.33.23'
+replication_mode: off
+replicate_select: off
+load_balance: on
+pool_hba: on
+slave_weight: 1
+master_weight: 1
+slave:  192.168.33.22
+master: 192.168.33.21
+master_slave_mode: on
+health_check_period: 5
+health_check_timeout: 0
+helth_check_user: postgres
+failover_command: /etc/pgpool2/failover.sh %d %P %H %R
+recovery_user: pgpool
+recovery_password: secret
+recovery_1st_stage_command:
+

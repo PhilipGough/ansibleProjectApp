@@ -1,0 +1,33 @@
+---
+
+ - hosts: all_groups:children
+   sudo: True
+   vars_files:
+    - "vars/ssh.yml"
+
+   tasks:
+
+    - name: Generate SSH keys on each postgres machine
+      user: name=postgres generate_ssh_key=yes ssh_key_file=.ssh/id_rsa
+
+    - name: get pub key
+      sudo: yes
+      sudo_user: postgres
+      shell: cat '/home/postgres/.ssh/id_rsa.pub'
+      delegate_to: "{{ item.ipaddress }}"
+      register: id_rsa_pub
+      changed_when: false
+      with_items: pgservers
+
+
+
+
+
+
+
+
+
+
+
+
+

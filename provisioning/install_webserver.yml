@@ -1,0 +1,31 @@
+---
+
+- hosts: webservers
+  sudo: True
+
+  vars_files:
+    - vars/flask_app.yml
+
+  tasks:
+
+    - name: install nginx
+      apt: name=nginx update_cache=yes
+
+    - name: copy nginx config file
+      template: src=files/nginx.conf dest=/etc/nginx/sites-available/default
+      notify:
+        - restart nginx
+
+    - name: enable configuration
+      file: >
+        dest=/etc/nginx/sites-enabled/default
+        src=/etc/nginx/sites-available/default
+        state=link
+
+    - name: copy index.html
+      template: src=templates/index.html.j2 dest=/usr/share/nginx/html/index.html
+        mode=0644
+
+  handlers:
+    - name: restart nginx
+      service: name=nginx state=restarted

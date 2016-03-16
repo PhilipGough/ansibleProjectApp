@@ -1,0 +1,10 @@
+---
+
+ip: '192.168.33.21'
+wal_level: 'hot_standby'
+max_replication_slots: 2
+max_wal_senders: 2
+hot_standby: on
+hot_standby_feedback: off
+slave: 192.168.33.22/32
+client: 192.168.33.23/32

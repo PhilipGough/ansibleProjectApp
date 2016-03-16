@@ -1,0 +1,9 @@
+---
+
+- name: This Play configs server - installs webserver - deploys app
+  hosts: webservers
+
+- include: 'server_setup.yml'
+- include: 'deploy_app.yml'
+- include: 'install_webserver.yml'
+

@@ -1,0 +1,49 @@
+---
+
+- hosts: webservers
+  sudo: True
+
+  tasks:
+    - name: Update Cache
+      apt: update_cache=yes
+
+    - name: Install packages needed for python application
+      apt: pkg={{ item }} state=latest
+      sudo: yes
+      with_items:
+        - libpq-dev
+        - python-dev
+        - python-setuptools
+        - python-psycopg2
+        - git-core
+
+    - name: install pip
+      easy_install: name=pip
+
+    - name: install various libraries with pip
+      pip: name={{item}} state=present
+      with_items:
+        - virtualenv
+        - supervisor
+        - uwsgi
+        - flask
+
+    - name: create supervisord config folder
+      file: dest=/etc/supervisor state=directory owner=root
+
+    - name: create supervisord config
+      template: src=files/supervisord.conf dest=/etc/supervisord.conf
+
+    - name: create supervisord init script
+      template: src=files/supervisord.sh dest=/etc/init.d/supervisord mode=0755
+
+    - name: start supervisord service and have it run during system startup
+      service: name=supervisord state=started enabled=yes
+
+    - name: create webapps directory
+      file: dest=/srv/webapps state=directory
+
+
+
+
+

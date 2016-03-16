@@ -1,0 +1,116 @@
+---
+
+  - hosts: dbservers
+    sudo: True
+
+    tasks:
+
+      - name: Download latest Debian repository
+        apt_repository: repo='deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main' state=present
+
+      - name: Import the repository signing key and update the package lists and add key
+        apt_key: url='https://www.postgresql.org/media/keys/ACCC4CF8.asc'
+
+      - name: Update Cache
+        apt: update_cache=yes
+
+      - name: Install Postgresql and requirements
+        apt: pkg={{ item }} state=latest
+        sudo: yes
+        with_items:
+          - postgresql-9.4
+          - libpq-dev
+          - python-psycopg2
+
+
+
+
+  - hosts: dbservers_master
+    sudo: True
+
+    vars_files:
+    - "vars/master.yml"
+
+    tasks:
+
+      - name: Create a database user
+        sudo: yes
+        sudo_user: postgres
+        postgresql_user: name=pgpool password=secret role_attr_flags=CREATEUSER
+
+      - name: Copy Main Configuration File
+        template: src=templates/postgresql.conf.j2 dest=/etc/postgresql/9.4/main/postgresql.conf
+
+      - name: Copy Client Auth Configuration File
+        sudo: yes
+        template: src=templates/master_pg_hba.conf.j2 dest=/etc/postgresql/9.4/main/pg_hba.conf
+
+      - name: restart postgres
+        service: name=postgresql state=restarted
+
+      - name: Run SQL command to create a replication slot for the slave
+        sudo: yes
+        sudo_user: postgres
+        command: psql -c "select * from pg_create_physical_replication_slot('slave')"
+
+
+  - hosts: dbservers_slave
+    sudo: True
+
+    vars_files:
+    - "vars/slave.yml"
+
+    tasks:
+
+      - name: Create a database user
+        sudo: yes
+        sudo_user: postgres
+        postgresql_user: name=pgpool password=secret role_attr_flags=CREATEUSER
+
+      - name: Copy Main Configuration File
+        template: src=templates/postgresql.conf.j2 dest=/etc/postgresql/9.4/main/postgresql.conf
+
+      - name: Copy Client Auth Configuration File
+        template: src=templates/slave_pg_hba.conf.j2 dest=/etc/postgresql/9.4/main/pg_hba.conf
+
+      - name: Stop postgres server
+        service: name=postgresql state=stopped
+
+      - name: Delete main directory
+        sudo: yes
+        sudo_user: postgres
+        file: path=~/9.4/main force=yes state=absent
+
+      - name: Run base backup command as postgres user
+        sudo: yes
+        sudo_user: postgres
+        command: 'pg_basebackup -v -D main -R -P -h {{ master }}'
+        args:
+          chdir: ~/9.4
+
+      - name: Add line to recovery file
+        sudo: yes
+        sudo_user: postgres
+        lineinfile:
+          dest=~/9.4/main/recovery.conf
+          line="primary_slot_name = 'slave'"
+          state=present
+          create=True
+        notify: start postgres
+
+
+    handlers:
+
+      - name: stop postgres
+        service: name=postgresql state=stopped
+
+      - name: start postgres
+        service: name=postgresql state=started
+
+      - name: restart postgres
+        service: name=postgresql state=restarted
+
+  - include: 'pg_pool.yml'
+  - include: 'pgres_cluster_ssh.yml'
+
+

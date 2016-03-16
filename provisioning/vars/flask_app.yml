@@ -1,0 +1,9 @@
+---
+
+app_name: sampleApp
+repo_url: https://github.com/PhilipGough/ansibleProjectApp.git
+repo_remote: origin
+repo_version: master
+webapps_dir: /srv/webapps
+wsgi_file: wsgi.py
+wsgi_callable: application
